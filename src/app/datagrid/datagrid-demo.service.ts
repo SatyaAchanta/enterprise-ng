@@ -1,7 +1,7 @@
 
-import { of,  Observable } from 'rxjs';
+import { of, Observable } from 'rxjs';
 import { Injectable } from '@angular/core';
-
+import { HttpClient } from '@angular/common/http';
 import {
   SohoDataGridService
 } from 'ids-enterprise-ng';
@@ -13,6 +13,8 @@ export class DataGridDemoService extends SohoDataGridService {
 
   private columns: Array<SohoDataGridColumn> = Array<SohoDataGridColumn>();
   public data: Array<any> = Array<any>();
+
+  public employees = [];
 
   public addColumn(column: SohoDataGridColumn) {
     this.getColumns().unshift(column);
@@ -29,7 +31,9 @@ export class DataGridDemoService extends SohoDataGridService {
     return of(this.data);
   }
 
-  constructor() {
+  constructor(
+    private http: HttpClient
+  ) {
     super();
   }
 
@@ -148,9 +152,11 @@ export class DataGridDemoService extends SohoDataGridService {
       id: 'status',
       name: 'Status',
       filterType: 'select',
-      options: [{ value: "ok", label: "OKAY" }, { value: "OK", label: "BIG OKAY" }, { value: "error", label: "ERROR" }, { value: "success", label: "SUCCESS" }],
+      options: this.employees,
       field: 'status',
-      formatter: Soho.Formatters.Dropdown
+      formatter: Soho.Formatters.Dropdown,
+      editor: Soho.Editors.Dropdown,
+      editorOptions: { source: this.loadEmployeeDetails }
     });
 
     this.columns.push(
@@ -164,23 +170,37 @@ export class DataGridDemoService extends SohoDataGridService {
       });
 
     this.columns.push({ id: 'ordered', hidden: true, name: 'Ordered', field: 'ordered', formatter: Soho.Formatters.Checkbox });
-    this.columns.push({ id: '', hidden: false, name: 'Actions', field: '',
-      formatter: Soho.Formatters.Actions, menuId: 'grid-actions-menu', selected: (e, a) => { this.onActionHandler(a); } });
+    this.columns.push({
+      id: '', hidden: false, name: 'Actions', field: '',
+      formatter: Soho.Formatters.Actions, menuId: 'grid-actions-menu', selected: (e, a) => { this.onActionHandler(a); }
+    });
     this.columns.push({ id: 'nested', hidden: true, name: 'Nested Prop', field: 'setting.optionOne', formatter: Soho.Formatters.Text });
     this.columns.push({ id: 'comment', hidden: true, name: 'Comment', field: 'comment', formatter: Soho.Formatters.Textarea, width: 100 });
 
-    this.data.push({ id: 1, productId: 2142201, productName: 'Compressor', activity: 'Assemble Paint', quantity: 1, price: 210.99, status: 'ok', orderDate: new Date(2014, 12, 8), action: 'Action', ordered: 1, setting: { optionOne: 'One', optionTwo: 'One' } });
-    this.data.push({ id: 2, productId: 2241202, productName: 'Different Compressor', activity: 'Inspect and Repair', quantity: 2, price: 210.99, status: '', orderDate: new Date(2015, 7, 3), action: 'On Hold', ordered: true, setting: { optionOne: 'One', optionTwo: 'One' } });
-    this.data.push({ id: 3, productId: 2342203, productName: 'Compressor', activity: 'Inspect and Repair', quantity: 1, price: 120.99, status: null, orderDate: new Date(2014, 6, 3), action: 'Action', ordered: true, comment: 'Dynamic harness out-of-the-box /n syndicate models deliver. Disintermediate, technologies /n scale deploy social streamline, methodologies, killer podcasts innovate. Platforms A-list disintermediate, value visualize dot-com /n tagclouds platforms incentivize interactive vortals disintermediate networking, webservices envisioneer; tag share value-added, disintermediate, revolutionary.' });
-    this.data.push({ id: 4, productId: 2445204, productName: 'Another Compressor', activity: 'Assemble Paint', quantity: 9, price: 210.99, status: 'error', orderDate: new Date(2015, 3, 3), action: 'Action', ordered: true });
-    this.data.push({ id: 5, productId: 2542205, productName: 'I Love Compressors', activity: 'Inspect and Repair', quantity: 4, price: 18.00, status: 'OK', orderDate: new Date(2015, 5, 5), action: 'On Hold', ordered: false });
-    this.data.push({ id: 5, productId: 2642205, productName: 'Air Compressors', activity: 'Inspect and Repair', quantity: 18, price: 9, status: 'OK', orderDate: new Date(2014, 6, 9), action: 'On Hold', comment: 'B2C ubiquitous communities maximize B2C synergies extend dynamic revolutionize, world-class robust peer-to-peer. Action-items semantic technologies clicks-and-mortar iterate min' });
-    this.data.push({ id: 6, productId: 2642206, productName: 'Some Compressor', activity: 'inspect and Repair', quantity: 41, price: 123.99, status: 'OK', orderDate: new Date(2014, 6, 9), action: 'On Hold', ordered: 0 });
-    this.data.push({ id: 7, productId: 2642206, productName: 'Some Compressor', activity: 'inspect and Repair', quantity: 41, price: '100.99', status: 'OK', orderDate: new Date(2014, 6, 9, 12, 12, 12), action: 'On Hold', ordered: 0 });
+    this.data.push({ id: 1, productId: 2142201, productName: 'Compressor', activity: 'Assemble Paint', quantity: 1, price: 210.99, status: '1', orderDate: new Date(2014, 12, 8), action: 'Action', ordered: 1, setting: { optionOne: 'One', optionTwo: 'One' } });
+    this.data.push({ id: 2, productId: 2241202, productName: 'Different Compressor', activity: 'Inspect and Repair', quantity: 2, price: 210.99, status: '2', orderDate: new Date(2015, 7, 3), action: 'On Hold', ordered: true, setting: { optionOne: 'One', optionTwo: 'One' } });
+    this.data.push({ id: 3, productId: 2342203, productName: 'Compressor', activity: 'Inspect and Repair', quantity: 1, price: 120.99, status: '1', orderDate: new Date(2014, 6, 3), action: 'Action', ordered: true, comment: 'Dynamic harness out-of-the-box /n syndicate models deliver. Disintermediate, technologies /n scale deploy social streamline, methodologies, killer podcasts innovate. Platforms A-list disintermediate, value visualize dot-com /n tagclouds platforms incentivize interactive vortals disintermediate networking, webservices envisioneer; tag share value-added, disintermediate, revolutionary.' });
+    this.data.push({ id: 4, productId: 2445204, productName: 'Another Compressor', activity: 'Assemble Paint', quantity: 9, price: 210.99, status: '3', orderDate: new Date(2015, 3, 3), action: 'Action', ordered: true });
+    this.data.push({ id: 5, productId: 2542205, productName: 'I Love Compressors', activity: 'Inspect and Repair', quantity: 4, price: 18.00, status: '1', orderDate: new Date(2015, 5, 5), action: 'On Hold', ordered: false });
+    this.data.push({ id: 5, productId: 2642205, productName: 'Air Compressors', activity: 'Inspect and Repair', quantity: 18, price: 9, status: '1', orderDate: new Date(2014, 6, 9), action: 'On Hold', comment: 'B2C ubiquitous communities maximize B2C synergies extend dynamic revolutionize, world-class robust peer-to-peer. Action-items semantic technologies clicks-and-mortar iterate min' });
+    this.data.push({ id: 6, productId: 2642206, productName: 'Some Compressor', activity: 'inspect and Repair', quantity: 41, price: 123.99, status: '1', orderDate: new Date(2014, 6, 9), action: 'On Hold', ordered: 0 });
+    this.data.push({ id: 7, productId: 2642206, productName: 'Some Compressor', activity: 'inspect and Repair', quantity: 41, price: '100.99', status: '1', orderDate: new Date(2014, 6, 9, 12, 12, 12), action: 'On Hold', ordered: 0 });
     /* tslint:enable */
   }
 
   onActionHandler(a: any) {
     console.warn(a.text());
   }
+
+  loadEmployeeDetails = function (response, term, gridArgs) {
+    setTimeout(() => {
+      response(
+        this.http.get('http://dummy.restapiexample.com/api/v1/employees').subscribe(
+          (employeesList: Array<any>) => {
+            for (const employee of employeesList) {
+              this.employees.push({ label: employee.id, value: employee.id });
+            }
+          }));
+    }, 5);
+  };
 }
